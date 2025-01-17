@@ -1,9 +1,15 @@
-name = "PaulStrings2"
+name = "PauliStrings2"
 uuid = "e8214510-4556-46a5-b53f-72884ec25a2d"
 authors = ["John Lapeyre"]
-version = "1.0.0-DEV"
+version = "0.1.0"
+
+[deps]
+Phase4s = "c4c67b59-b612-4a28-8b47-1c875e8dafd5"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
+Phase4s = "0.1.0"
+Random = "1.11.0"
 julia = "1.10"
 
 [extras]

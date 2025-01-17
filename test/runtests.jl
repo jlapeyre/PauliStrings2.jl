@@ -1,6 +1,6 @@
-using PaulStrings2
+using PauliStrings2
 using Test
 
-@testset "PaulStrings2.jl" begin
+@testset "PauliStrings2.jl" begin
     # Write your tests here.
 end
