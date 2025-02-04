@@ -26,8 +26,11 @@ struct PauliTerm{T,N}
     pstring::String
     coeff::T
 
-    function PauliTerm{T}(s::AbstractString, coeff::T) where {T}
-        if !all(c -> c in (0x58, 0x59, 0x5a, 0x49), codeunits(s))
+    # Note: Checking can take a long time
+    # TODO: impl passing `check` around. eg when creating random strings,
+    # or via multiplication, dont need to check
+    function PauliTerm{T}(s::AbstractString, coeff::T; check::Bool=false) where {T}
+        if check && !all(c -> c in (0x58, 0x59, 0x5a, 0x49), codeunits(s))
             throw(ArgumentError("Unrecognized character in Pauli string"))
         end
         return new{T,length(codeunits(s))}(s, coeff)
@@ -57,7 +60,6 @@ function PauliTerm{T}(s::AbstractString) where {T}
     return PauliTerm{T,ncodeunits(s)}(s, one(T))
 end
 
-
 """
     PauliTerm(s::AbstractString, coeff=Phase(1))
     PauliTerm{T,N}(s::AbstractString, coeff::T=one(T)) where {T,N}
@@ -68,12 +70,12 @@ function PauliTerm(s::AbstractString, coeff=Phase(1))
     return PauliTerm{typeof(coeff)}(s, coeff)
 end
 
-function Base.:(==)(t1::PauliTerm{<:Any,N}, t2::PauliTerm{<:Any,N}) where {N}
-    return codeunits(t1.pstring) == codeunits(t2.pstring) && t1.coeff == t2.coeff
-end
+# function Base.:(==)(t1::PauliTerm{<:Any,N}, t2::PauliTerm{<:Any,N}) where {N}
+#     return codeunits(t1.pstring) == codeunits(t2.pstring) && t1.coeff == t2.coeff
+# end
 
-# Length differs
-Base.:(==)(t1::PauliTerm, t2::PauliTerm) = false
+# # Length differs
+# Base.:(==)(t1::PauliTerm, t2::PauliTerm) = false
 
 function embed(
     pauli_string::AbstractString,
@@ -172,20 +174,44 @@ function Base.copy(op::PauliOp{T,N}) where {T,N}
     return PauliOp{T,N}(copy(op.terms))
 end
 
-Base.:(==)(op1::PauliOp, op2::PauliOp) = false
+# function _no_eq(type_)
+#     :(Base.:(==)(::($type_), ::($type_)) = throw(ErrorException(string("== not defined for ", $type_))))
+# end
+# macro noeq(type_)
+#     :(Base.:(==)(::($type_), ::($type_)) = throw(ErrorException(string("== not defined for ", $type_))))
+# end
 
+Base.:(==)(op1::PauliOp, op2::PauliOp) = false
 function Base.:(==)(op1::PauliOp{<:Any,N}, op2::PauliOp{<:Any,N}) where {N}
     return all(t -> t[1] == t[2], zip(op1.terms, op2.terms))
 end
 
 function Random.rand(rng::Random.AbstractRNG, ::Random.SamplerType{PauliTerm{T, N}}) where {T, N}
-#    PauliTerm{T, N}(rand_pauli_string(N))
-    PauliTerm{T,N}(rand_pauli_string(N))
+    # More performant if we omit the type parameters from the constructor
+    PauliTerm(rand_pauli_string(N), one(T))
 end
 
 function embed(op::PauliOp, indices, num_qubits=length(term.pstring))
     return PauliOp([embed(term, indices, num_qubits) for term in op.terms])
 end
+
+# Eh. No. I think not using `Char` but rather 0x00 - 0x03 is better
+# TODO: Try looking up products,phases in this table.
+let prods = [((0, 0), 'I') ((1, 0), 'Z') ((1, 1), 'Y') ((0, 0), 'X'); ((1, 1), 'Z') ((0, 0), 'I') ((1, 0), 'X') ((0, 0), 'Y'); ((1, 0), 'Y') ((1, 1), 'X') ((0, 0), 'I') ((0, 0), 'Z'); ((0, 0), 'X') ((0, 0), 'Y') ((0, 0), 'Z') ((0, 0), 'I')]
+end
+
+function findind end
+
+let chars = ('I', 'X', 'Y', 'Z')
+    global findind
+    function findind(c::Char)
+        for (i,x) in enumerate(chars)
+            x === c && return i
+        end
+        0
+    end
+end
+
 
 function _mul(a::Char, b::Char)
     (I, X, Y, Z) = ('I', 'X', 'Y', 'Z')
